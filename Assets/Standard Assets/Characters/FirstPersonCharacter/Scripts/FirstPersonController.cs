@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityStandardAssets.CrossPlatformInput;
 using UnityStandardAssets.Utility;
@@ -7,7 +6,6 @@ using Random = UnityEngine.Random;
 #pragma warning disable 618, 649
 namespace UnityStandardAssets.Characters.FirstPerson
 {
-    [RequireComponent(typeof (CharacterController))]
     [RequireComponent(typeof (AudioSource))]
     public class FirstPersonController : MonoBehaviour
     {
@@ -15,6 +13,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
         [SerializeField] private bool m_IsWalking;
         [SerializeField] private float m_WalkSpeed;
         [SerializeField] private float m_RunSpeed;
+        [SerializeField] private float m_CrouchSpeed = 3f;
         [SerializeField] [Range(0f, 1f)] private float m_RunstepLenghten;
         [SerializeField] private float m_JumpSpeed;
         [SerializeField] private float m_StickToGroundForce;
@@ -43,11 +42,17 @@ namespace UnityStandardAssets.Characters.FirstPerson
         private float m_NextStep;
         private bool m_Jumping;
         private AudioSource m_AudioSource;
+        
+        // Новые переменные для приседания
+        private bool m_IsCrouching = false;
+        private bool _keyCPressed;
+        private Animator m_Animator;  // Аниматор для управления состояниями
+        private bool m_IsCrouchWalking = false;  // Отдельная переменная для движения в приседе
 
         // Use this for initialization
         private void Start()
         {
-            m_CharacterController = GetComponent<CharacterController>();
+            m_CharacterController = GetComponentInParent<CharacterController>();
             m_Camera = Camera.main;
             m_OriginalCameraPosition = m_Camera.transform.localPosition;
             m_FovKick.Setup(m_Camera);
@@ -57,6 +62,8 @@ namespace UnityStandardAssets.Characters.FirstPerson
             m_Jumping = false;
             m_AudioSource = GetComponent<AudioSource>();
 			m_MouseLook.Init(transform , m_Camera.transform);
+            
+            m_Animator = GetComponent<Animator>(); 
         }
 
 
@@ -64,6 +71,10 @@ namespace UnityStandardAssets.Characters.FirstPerson
         private void Update()
         {
             RotateView();
+            
+            HandleCrouch();
+            UpdateAnimator();
+            
             // the jump state needs to read here to make sure it is not missed
             if (!m_Jump)
             {
@@ -85,7 +96,22 @@ namespace UnityStandardAssets.Characters.FirstPerson
             m_PreviouslyGrounded = m_CharacterController.isGrounded;
         }
 
-
+        private void HandleCrouch()
+        {
+            m_IsCrouching = Input.GetKey(KeyCode.C);
+        }
+        private void UpdateAnimator()
+        {
+            bool isMoving = m_Input.sqrMagnitude > 0;
+            bool isRunning = !m_IsWalking && isMoving;
+            m_IsCrouchWalking = m_IsCrouching && isMoving;
+            
+            m_Animator.SetBool("IsCrouching", m_IsCrouching && !isMoving);
+            m_Animator.SetBool("IsMoving", isMoving && !m_IsCrouching);
+            m_Animator.SetBool("IsRunning", isRunning);
+            m_Animator.SetBool("isCrouchWalking", m_IsCrouchWalking);
+        }
+        
         private void PlayLandingSound()
         {
             m_AudioSource.clip = m_LandSound;
@@ -99,6 +125,12 @@ namespace UnityStandardAssets.Characters.FirstPerson
             float speed;
             GetInput(out speed);
             // always move along the camera forward as it is the direction that it being aimed at
+            
+            if (m_IsCrouching)
+            {
+                speed = m_CrouchSpeed;
+            }
+            
             Vector3 desiredMove = transform.forward*m_Input.y + transform.right*m_Input.x;
 
             // get a normal for the surface that is being touched to move along it
@@ -139,7 +171,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
         private void PlayJumpSound()
         {
             m_AudioSource.clip = m_JumpSound;
-            m_AudioSource.Play();
+            m_AudioSource.PlayOneShot(m_JumpSound);
         }
 
 
