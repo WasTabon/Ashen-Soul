@@ -9,8 +9,6 @@ namespace UnityStandardAssets.Characters.FirstPerson
     [RequireComponent(typeof (AudioSource))]
     public class FirstPersonController : MonoBehaviour
     {
-        [SerializeField] private float _cameraPositionZOffset = 19.7f;
-        [SerializeField] private Transform _headBone;
         [SerializeField] private bool m_IsWalking;
         [SerializeField] private float m_WalkSpeed;
         [SerializeField] private float m_RunSpeed;
@@ -43,12 +41,6 @@ namespace UnityStandardAssets.Characters.FirstPerson
         private float m_NextStep;
         private bool m_Jumping;
         private AudioSource m_AudioSource;
-        
-        // Новые переменные для приседания
-        private bool m_IsCrouching = false;
-        private bool _keyCPressed;
-        private Animator m_Animator;  // Аниматор для управления состояниями
-        private bool m_IsCrouchWalking = false;  // Отдельная переменная для движения в приседе
 
         // Use this for initialization
         private void Start()
@@ -63,8 +55,6 @@ namespace UnityStandardAssets.Characters.FirstPerson
             m_Jumping = false;
             m_AudioSource = GetComponent<AudioSource>();
 			m_MouseLook.Init(transform , m_Camera.transform);
-            
-            m_Animator = GetComponent<Animator>(); 
         }
 
 
@@ -72,10 +62,6 @@ namespace UnityStandardAssets.Characters.FirstPerson
         private void Update()
         {
             RotateView();
-            
-            HandleCrouch();
-            HandleJump();
-            UpdateAnimator();
             
             // the jump state needs to read here to make sure it is not missed
             if (!m_Jump)
@@ -97,34 +83,6 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
             m_PreviouslyGrounded = m_CharacterController.isGrounded;
         }
-
-        private void HandleCrouch()
-        {
-            m_IsCrouching = Input.GetKey(KeyCode.C);
-            if (Input.GetKeyDown(KeyCode.C))
-            {
-                m_IsCrouching = !m_IsCrouching;
-            }
-        }
-        private void HandleJump()
-        {
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                m_Animator.SetTrigger("Jump");
-            }
-        }
-        
-        private void UpdateAnimator()
-        {
-            bool isMoving = m_Input.sqrMagnitude > 0;
-            bool isRunning = !m_IsWalking && isMoving;
-            m_IsCrouchWalking = m_IsCrouching && isMoving;
-            
-            m_Animator.SetBool("IsCrouching", m_IsCrouching && !isMoving);
-            m_Animator.SetBool("IsMoving", isMoving && !m_IsCrouching);
-            m_Animator.SetBool("IsRunning", isRunning);
-            m_Animator.SetBool("isCrouchWalking", m_IsCrouchWalking);
-        }
         
         private void PlayLandingSound()
         {
@@ -139,11 +97,6 @@ namespace UnityStandardAssets.Characters.FirstPerson
             float speed;
             GetInput(out speed);
             // always move along the camera forward as it is the direction that it being aimed at
-            
-            if (m_IsCrouching)
-            {
-                speed = m_CrouchSpeed;
-            }
             
             Vector3 desiredMove = transform.forward*m_Input.y + transform.right*m_Input.x;
 
@@ -239,13 +192,11 @@ namespace UnityStandardAssets.Characters.FirstPerson
                                       (speed*(m_IsWalking ? 1f : m_RunstepLenghten)));
                 newCameraPosition = m_Camera.transform.localPosition;
                 newCameraPosition.y = m_Camera.transform.localPosition.y - m_JumpBob.Offset();
-                newCameraPosition.z = _cameraPositionZOffset;
             }
             else
             {
                 newCameraPosition = m_Camera.transform.localPosition;
                 newCameraPosition.y = m_OriginalCameraPosition.y - m_JumpBob.Offset();
-                newCameraPosition.z = _cameraPositionZOffset;
             }
             m_Camera.transform.localPosition = newCameraPosition;
         }
