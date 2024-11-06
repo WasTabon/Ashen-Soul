@@ -10,6 +10,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
     public class FirstPersonController : MonoBehaviour
     {
         [SerializeField] private float _cameraPositionZOffset = 19.7f;
+        [SerializeField] private Transform _headBone;
         [SerializeField] private bool m_IsWalking;
         [SerializeField] private float m_WalkSpeed;
         [SerializeField] private float m_RunSpeed;
@@ -73,6 +74,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
             RotateView();
             
             HandleCrouch();
+            HandleJump();
             UpdateAnimator();
             
             // the jump state needs to read here to make sure it is not missed
@@ -99,7 +101,19 @@ namespace UnityStandardAssets.Characters.FirstPerson
         private void HandleCrouch()
         {
             m_IsCrouching = Input.GetKey(KeyCode.C);
+            if (Input.GetKeyDown(KeyCode.C))
+            {
+                m_IsCrouching = !m_IsCrouching;
+            }
         }
+        private void HandleJump()
+        {
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                m_Animator.SetTrigger("Jump");
+            }
+        }
+        
         private void UpdateAnimator()
         {
             bool isMoving = m_Input.sqrMagnitude > 0;
